@@ -1,6 +1,0 @@
-apiVersion: v2
-appVersion: 1.16.28
-description: A Helm chart for Kubernetes
-name: data-sender
-type: application
-version: 1.16.28

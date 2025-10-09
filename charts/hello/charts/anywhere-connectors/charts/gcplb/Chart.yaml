@@ -1,6 +1,0 @@
-apiVersion: v2
-description: A Helm chart for integrating GCP Load Balancers Service Extensions with
-  eWAF on GKE
-name: gcplb
-type: application
-version: 0.2.0

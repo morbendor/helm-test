@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: apisecurity-controller-configmap
-data:
-  helm_version: {{ .Chart.AppVersion | default "unknown" }}

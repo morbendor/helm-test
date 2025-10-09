@@ -1,5 +1,0 @@
-apiVersion: v2
-description: A Helm chart for Kubernetes
-name: envoy-gateway
-type: application
-version: 0.2.0

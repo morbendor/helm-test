@@ -1,6 +1,0 @@
-apiVersion: v2
-appVersion: 0.0.1-standalone
-description: A Helm chart for Kubernetes
-name: normalizer
-type: application
-version: 0.0.1-master.602-standalone-05cf97

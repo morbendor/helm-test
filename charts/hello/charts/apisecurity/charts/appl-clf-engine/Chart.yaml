@@ -1,6 +1,0 @@
-apiVersion: v2
-appVersion: 0.0.1-standalone
-description: A Helm chart for Kubernetes
-name: appl-clf-engine
-type: application
-version: 0.0.1-master.424-standalone-b9b5a5

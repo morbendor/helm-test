@@ -1,5 +1,0 @@
-apiVersion: v2
-description: Imperva's WAF Anywhere solution for Envoy Proxy
-name: envoy
-type: application
-version: 0.2.0

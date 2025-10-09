@@ -1,6 +1,0 @@
-apiVersion: v2
-appVersion: 0.0.1-standalone
-description: A Helm chart for bola-feaute-extractor standalone
-name: bola-feature-extractor
-type: application
-version: 0.0.1-master.153-standalone-a19ef3

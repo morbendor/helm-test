@@ -1,6 +1,0 @@
-apiVersion: v2
-appVersion: 0.0.1-standalone
-description: A Helm chart for Kubernetes
-name: cloud-connecter
-type: application
-version: 0.0.1-master.51-standalone-4e238d
