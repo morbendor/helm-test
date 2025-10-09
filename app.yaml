@@ -1,0 +1,32 @@
+# argocd repo add https://github.com/morbendor/value-test.git \
+#   --username argocd \
+#   --password github_pat_11AOGHDFQ0OomG2NDDV7Q603TMwU0M
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: imperva
+  namespace: argocd
+spec:
+  project: default
+  sources:
+  - repoURL: https://morbendor.github.io/helm-test/charts
+    targetRevision: 2.1.0 
+    chart: imperva-stack
+    helm:
+      releaseName: imperva
+      valueFiles:
+        - $values/values-nginx-sn-clear.yaml # $values is the root of value files repository
+  - repoURL: https://github.com/morbendor/value-test.git
+    targetRevision: main # replaced with the branch
+    ref: values # The reference to be used above
+  destination:
+    server: https://apiserver.com:58821
+    namespace: imperva-webserver
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - SkipHooks=false
