@@ -1,0 +1,104 @@
+{{- $root := . -}}
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: {{ template "apisec-controller-message-bus.fullname" . }}
+  labels:
+    app: {{ template "apisec-controller-message-bus.name" . }}
+    chart: {{ template "apisec-controller-message-bus.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    tags.datadoghq.com/env: {{ .Release.Namespace }}
+    tags.datadoghq.com/service: {{ template "apisec-controller-message-bus.name" . }}
+    tags.datadoghq.com/version:  {{ template "apisec-controller-message-bus.version" . }}
+spec:
+  strategy:
+{{ toYaml .Values.updateStrategy | indent 4 }}
+  replicas: {{ .Values.replicaCount }}
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  selector:
+    matchLabels:
+      app: {{ template "apisec-controller-message-bus.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "apisec-controller-message-bus.name" . }}
+        release: {{ .Release.Name }}
+      annotations:
+{{ toYaml .Values.deployment.annotations | indent 8 }}
+    spec:
+      {{ if eq (default "" .Values.standalone | toString) "true" }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
+
+      {{- range $name, $value := .Values.env }}
+        {{- if eq "REGION" $name }}
+          {{- if contains "eks" $value }}
+      serviceAccountName: {{ template "apisec-controller-message-bus.fullname" . }}
+      automountServiceAccountToken: true
+          {{- end }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ template "apisec-controller-message-bus.imageregistry" . }}/{{ .Values.image.repository }}:{{ template "apisec-controller-message-bus.imagetag" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+{{ toYaml .Values.deployment.ports | indent 10 }}
+          {{- if .Values.env }}
+          env:
+          {{- range $k, $v := .Values.env }}
+            - name: {{ $k }}
+              value: "{{ $v }}"
+          {{- end }}
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_ENV
+              value: {{ .Release.Namespace }}
+            - name: DD_SERVICE
+              value: {{ template "apisec-controller-message-bus.name" . }}
+            - name: DD_VERSION
+              value:  {{ template "apisec-controller-message-bus.version" . }}
+            - name: DD_PROFILING_ENABLED
+              value: "true"
+            - name: DD_LOGS_INJECTION
+              value: "true"
+            - name: DD_TRACE_SAMPLE_RATE
+              value: "1"
+            - name: DD_DOGSTATSD_NON_LOCAL_TRAFFIC
+              value: 'true'
+            - name: DD_RUNTIME_METRICS_ENABLED
+              value: "true"
+            - name: DD_JMXFETCH_ENABLED
+              value: "true"
+          {{- end }}
+{{ if .Values.healthChecks.enabled }}
+{{ (unset .Values.healthChecks "enabled") | toYaml | indent 10 }}
+{{ end }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+          securityContext:
+{{ toYaml .Values.securityContext | indent 12 }}  
+          volumeMounts:
+{{ toYaml .Values.volumeMounts | indent 12 }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+      volumes:
+{{ toYaml .Values.volumes | indent 8 }}
+

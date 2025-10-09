@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: 0.0.1-standalone
+description: A Helm chart for Kubernetes
+name: policy-downloader
+type: application
+version: 0.0.1-main.77-standalone-fcd801

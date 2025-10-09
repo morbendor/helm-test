@@ -1,0 +1,230 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "security-engine.fullname" . }}
+  labels:
+    app: imperva-security-engine
+    {{- include "security-engine.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "security-engine.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        helm.sh/revision: {{ .Release.Revision | quote }}
+        {{- include "security-engine.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "security-engine.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ include "image-path" (dict "root" .Values "image" .Values.image) }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: https
+              containerPort: 443
+              protocol: TCP
+            - name: health
+              containerPort: 8081
+              protocol: TCP
+          {{- if .Values.startupProbe.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.startupProbe.path | quote }}
+              port: {{ .Values.startupProbe.port }}
+            initialDelaySeconds: {{ .Values.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.startupProbe.successThreshold }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.livenessProbe.path | quote }}
+              port: {{ .Values.livenessProbe.port }}
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessProbe.path | quote }}
+              port: {{ .Values.readinessProbe.port }}
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          {{- end }}
+          resources: {{ include "security-engine.resources" . | nindent 12 }}
+          env:
+            - name: REDIS_CLUSTER
+              value: "{{ index .Values "redis-cluster" "enabled" }}"
+            - name: WN
+              value: {{ .Values.WN | quote }}
+            - name: IMPERVA_IS_VPOP_MT
+              value: "{{ .Values.isVpopMt }}"
+            - name: SOURCE_ENV
+              value: {{ .Values.sourceEnv | quote }}
+            - name: POP_NAME
+              value: {{ .Values.region | quote }}
+            - name: IP_TO_ASN_DB_DEPLOY
+              value: {{.Values.ip2asn | quote }}
+            - name: IMPERVA_ENV
+              value: {{.Values.global.env}}
+            - name: NAMESPACE
+              value: {{.Release.Namespace}}
+            - name: USE_DATA_SENDER
+              value: "true"
+            - name: DEBUG
+              value: "{{.Values.global.debug}}"
+            - name: MEM_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+                  containerName: {{ .Chart.Name }}
+            - name: CPU_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.cpu
+                  containerName: {{ .Chart.Name }}
+            - name: MEM_REQUEST
+              valueFrom:
+                resourceFieldRef:
+                  containerName: {{ .Chart.Name }}
+                  resource: requests.memory
+            - name: CPU_REQUEST
+              valueFrom:
+                resourceFieldRef:
+                  containerName: {{ .Chart.Name }}
+                  resource: requests.cpu
+            - name: LOTUS_API_ID
+              valueFrom:
+                secretKeyRef:
+                  key: IMPERVA_API_ID
+                  name: imperva-auth
+                  optional: true
+            - name: LOTUS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: IMPERVA_API_KEY
+                  name: imperva-auth
+                  optional: true
+            - name: IMPERVA_CHART_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  key: chartVersion
+                  name: shared-config
+            - name: IMPERVA_INSTANCE_ID
+              valueFrom:
+                configMapKeyRef:
+                  key: instanceId
+                  name: shared-config
+            - name: IMPERVA_CONTROLLER_PACKAGE_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: controllerPackageKey
+                  name: shared-config
+            {{ include "global-env-vars" . | nindent 12 }}
+          volumeMounts:
+            - mountPath: /dev/fuse
+              name: fuse
+            - mountPath: "/etc/certs/security-engine"
+              name: security-engine-certs-{{ .Release.Namespace }}
+              readOnly: true
+            {{- if (get .Values "redis-cluster").enabled }}
+            - name: redis-certs
+              mountPath: /etc/certs/redis-cluster
+              readOnly: true
+            {{- end }}
+            - mountPath: "/etc/certs/mediator"
+              name: cloud-mediator-certs-{{ .Release.Namespace }}
+              readOnly: true
+            - mountPath: "/etc/certs/data-sender"
+              name: data-sender-certs-{{ .Release.Namespace }}
+              readOnly: true
+            - name: varlog
+              mountPath: /var/log/incapsula/
+            - name: imperva-auth-secrets
+              mountPath: "/etc/imperva-auth"
+              readOnly: false
+          {{- include "volume-mount-customer-cert-creation" . | indent 12 }}
+          {{- include "volume-mount-apisec-ca-secret" . | nindent 12 }}
+        {{- if .Values.fluentbit.enabled }}
+        - name: fbit
+          resources:
+            {{- toYaml .Values.resources.fbit | nindent 12 }}
+          image: "{{ include "image-path" (dict "root" .Values "image" .Values.auxImages.fluentBit) }}"
+          volumeMounts:
+            - name: fluent-bit-config-security-engine
+              mountPath: /fluent-bit/etc/
+              readOnly: true
+            - name: varlog
+              mountPath: /var/log/incapsula/
+            - name: security-engine-certs-{{ .Release.Namespace }}
+              mountPath: "/etc/certs/security-engine"
+              readOnly: true
+        {{- end }}
+      volumes:
+        - name: fuse
+          hostPath:
+            path: /dev/fuse
+        - name: imperva-auth-secrets
+          secret:
+            secretName: imperva-auth
+            defaultMode: 0400
+        - name: security-engine-certs-{{ .Release.Namespace }}
+          secret:
+            secretName: {{ include "anywhere-commons.get-security-engine-tls-secret-name" . }}
+            defaultMode: 0400
+      {{- if (get .Values "redis-cluster").enabled }}
+        - name: redis-certs
+          secret:
+            secretName: {{ printf "%s-redis-cluster-crt" .Release.Name }}
+      {{- end }}
+        - name: cloud-mediator-certs-{{ .Release.Namespace }}
+          secret:
+            secretName: {{ include "anywhere-commons.get-cloud-mediator-tls-secret-name" . }}
+            defaultMode: 0400
+        - name: data-sender-certs-{{ .Release.Namespace }}
+          secret:
+            secretName: {{ include "anywhere-commons.get-data-sender-tls-secret-name" . }}
+            defaultMode: 0400
+        {{- if .Values.fluentbit.enabled }}
+        - name: fluent-bit-config-security-engine
+          configMap:
+            name: fluent-bit-config-security-engine
+        {{- end }}
+        - name: varlog
+          emptyDir: {}
+      {{- include "volume-customer-cert-creation" . | indent 8 }}
+      {{- include "volume-apisec-ca-secret" . | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}-hook-job"
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+  labels:
+    app.kubernetes.io/managed-by: "{{ .Release.Service }}"
+    app.kubernetes.io/name: "{{ .Chart.Name }}"
+    app.kubernetes.io/instance: "{{ .Release.Name }}"
+spec:
+  template:
+    spec:
+      serviceAccountName: updatesecret
+      automountServiceAccountToken: true
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: controller-secret
+      containers:
+      - name: hook-job-container
+        image: "{{.Values.global.imageregistry}}/{{ .Values.global.apisecPublicRepo}}/{{ .Values.CronJob.image }}"
+        volumeMounts:
+        env:
+        - name: API_X_TYPE
+          value: controller
+        - name: ID
+          valueFrom:
+            secretKeyRef:
+              name: controller-secret
+              key: controller-id
+        - name: TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: controller-secret
+              key: controller-token
+        - name: ACCOUNT_ID
+          valueFrom:
+            secretKeyRef:
+              name: controller-secret
+              key: account-id
+        - name: JFROG_URL
+          valueFrom:
+            secretKeyRef:
+              name: controller-secret
+              key: access-token-url
+        {{ include "apisec-global-env-vars" . | nindent 8 }}
+      restartPolicy: OnFailure
+  backoffLimit: 4

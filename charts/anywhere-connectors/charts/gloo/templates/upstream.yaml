@@ -1,0 +1,24 @@
+{{- if eq "gloo" .Values.global.ingressType -}}
+apiVersion: gloo.solo.io/v1
+kind: Upstream
+metadata:
+  labels:
+    app: imperva-security-engine
+    discovered_by: kubernetesplugin
+  name: {{ $.Values.securityEngineServiceName }}-upstream
+  namespace: {{ .Release.Namespace }}
+spec:
+  sslConfig:
+    secretRef:
+      name: "{{ include "anywhere-commons.get-security-engine-tls-secret-name" .}}"
+      namespace: {{ .Release.Namespace }}
+    sni: {{ $.Values.securityEngineServiceName }}.{{.Release.Namespace}}.svc.cluster.local
+  discoveryMetadata: {}
+  useHttp2: true
+  kube:
+    selector:
+      app: imperva-security-engine
+    serviceName: {{ $.Values.securityEngineServiceName }}
+    serviceNamespace: {{ .Release.Namespace }}
+    servicePort: {{ $.Values.securityEngineServicePort }}
+{{- end }}

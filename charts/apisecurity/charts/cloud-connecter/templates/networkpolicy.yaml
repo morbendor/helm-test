@@ -1,0 +1,17 @@
+{{ if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ template "cloud-connecter.fullname" . }}
+  labels:
+    app: {{ template "cloud-connecter.name" . }}
+    chart: {{ template "cloud-connecter.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ template "cloud-connecter.name" . }}
+      release: {{ .Release.Name }}
+{{ (unset .Values.networkPolicy "enabled") | toYaml | indent 2 }}
+{{- end }}

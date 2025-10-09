@@ -1,0 +1,80 @@
+{{- if eq "gcplb" .Values.global.ingressType }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gcplb.fullname" . }}-proxy
+  labels:
+    {{- include "gcplb.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "gcplb.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "gcplb.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "gcplb.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+      - name: envoy
+        configMap:
+          name: {{ include "gcplb.fullname" . }}
+          # readOnly: true
+      - name: ext-proc-filter-ca-root-cert
+        secret:
+          secretName: {{ include "anywhere-commons.get-security-engine-tls-secret-name" .}}
+          defaultMode: 420
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ include "image-path" (dict "root" .Values "image" .Values.image) }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+          - containerPort: 9901
+            name: admin
+            protocol: TCP
+          - containerPort: {{ .Values.service.port }}
+            name: https
+            protocol: TCP                                  
+          volumeMounts:
+          - name: envoy
+            mountPath: "/etc/envoy/envoy.yaml"
+            subPath: "envoy.yaml"
+          - name: ext-proc-filter-ca-root-cert
+            mountPath: "/etc/envoy/ca.crt"
+            subPath: "ca.crt"
+          - name: ext-proc-filter-ca-root-cert
+            mountPath: "/etc/envoy/tls.key"
+            subPath: "tls.key"
+          - name: ext-proc-filter-ca-root-cert
+            mountPath: "/etc/envoy/tls.crt"
+            subPath: "tls.crt"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

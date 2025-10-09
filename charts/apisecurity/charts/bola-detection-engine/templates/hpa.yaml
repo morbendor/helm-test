@@ -1,0 +1,17 @@
+{{- if .Values.autoscaling.enabled }}
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ template "bola-detection-engine.fullname" . }}
+  labels:
+    app: {{ template "bola-detection-engine.name" . }}
+    chart: {{ template "bola-detection-engine.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ template "bola-detection-engine.fullname" . }}
+{{ (unset .Values.autoscaling "enabled") | toYaml | indent 2 }}
+{{- end }}

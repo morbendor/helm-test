@@ -1,0 +1,13 @@
+{{- if eq "gcplb" .Values.global.ingressType }}
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: {{ include "gcplb.fullname" . }}-gateway
+  namespace: {{ .Release.Namespace }}
+spec:
+  gatewayClassName: {{ .Values.gateway.className }}
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+{{- end }}

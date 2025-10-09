@@ -1,0 +1,17 @@
+{{ if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ template "bola-detection-engine.fullname" . }}
+  labels:
+    app: {{ template "bola-detection-engine.name" . }}
+    chart: {{ template "bola-detection-engine.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ template "bola-detection-engine.name" . }}
+      release: {{ .Release.Name }}
+{{ (unset .Values.networkPolicy "enabled") | toYaml | indent 2 }}
+{{- end }}

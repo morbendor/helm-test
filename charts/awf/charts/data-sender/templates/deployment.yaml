@@ -1,0 +1,243 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "data-sender.fullname" . }}
+  labels:
+    {{- include "data-sender.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "data-sender.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        helm.sh/revision: {{ .Release.Revision | quote }}
+        {{- include "data-sender.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "data-sender.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        {{- if .Values.fluentbit.enabled }}
+        - name: fbit-shared-data
+          emptyDir: {}
+        {{- end }}
+        - name: imperva-user-data
+          {{- if .Values.persistence.enabled}}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.claimName }}-{{ .Release.Namespace }}
+          {{else}}
+          emptyDir: { }
+          {{end}}
+        - name: imperva-auth-secrets
+          secret:
+            secretName: imperva-auth
+            defaultMode: 0400
+          {{- if .Values.storeData.onAwsS3}}
+        - name: aws-auth-secrets
+          secret:
+            secretName: aws-auth
+            defaultMode: 0400
+          {{- end }}
+        {{- if .Values.fluentbit.enabled }}
+        - name: fluent-bit-config-data-sender
+          configMap:
+            name: fluent-bit-config-data-sender
+        {{- end }}
+        - name: varlog
+          emptyDir: { }
+        - name: security-engine-certs-{{.Release.Namespace}}
+          secret:
+            secretName: "{{ include "anywhere-commons.get-security-engine-tls-secret-name" . }}"
+            defaultMode: 0400
+        - name: data-sender-certs-{{.Release.Namespace}}
+          secret:
+            secretName: "{{ include "anywhere-commons.get-data-sender-tls-secret-name" . }}"
+            defaultMode: 0400
+      {{- include "volume-customer-cert-creation" . | indent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ include "image-path" (dict "root" .Values "image" .Values.image) }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: LOCAL_STORAGE_PATH
+              value: {{ .Values.persistence.mountPath }}
+            - name: LOG_FILE_PATH
+              value: {{ .Values.log.appLogFilePath }}
+            - name: FLUENTBIT_ENABLED
+              value: "{{ .Values.fluentbit.enabled }}"
+            - name: LOG_MAX_SIZE_MB
+              value: "{{ .Values.log.maxLogSize }}"
+            - name: LOG_MAX_BACKUPS
+              value: "{{ .Values.log.maxLogBackups }}"
+            - name: LOG_MAX_AGE_DAYS
+              value: "{{ .Values.log.maxLogAge }}"
+            - name: PROFILE
+              value: {{.Values.global.env}}
+            - name: DEBUG
+              value: "{{.Values.global.debug}}"
+            - name: "DS_DLQ_JOB_INTERVAL_MINUTES"
+              value: "{{.Values.dlq.jobIntervalMinutes}}"
+            - name: "DS_DLQ_ITEM_TTL_DAYS"
+              value: "{{.Values.dlq.ttlDays}}"
+            - name: IMPERVA_S3_UPLOAD
+              value: "{{.Values.storeData.onAwsS3}}"
+            - name: IMPERVA_STORE_LOCALLY
+              value: "{{.Values.storeData.onLocalDisk}}"
+            - name: SERVER_PORT
+              value: "{{ .Values.service.port }}"
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: IMPERVA_INSTANCE_ID
+              valueFrom:
+                configMapKeyRef:
+                  key: instanceId
+                  name: shared-config
+            - name: IMPERVA_CHART_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  key: chartVersion
+                  name: shared-config
+            - name: INGRESS_TYPE
+              valueFrom:
+                configMapKeyRef:
+                  key: ingressType
+                  name: shared-config
+            - name: IMPERVA_CONTROLLER_PACKAGE_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: controllerPackageKey
+                  name: shared-config
+            {{ include "global-env-vars" . | nindent 12 }}
+          ports:
+            - name: https
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          #livenessProbe:
+          #  httpGet:
+          #    path: /
+          #    port: http
+          #readinessProbe:
+          #  httpGet:
+          #    path: /
+          #    port: http
+          volumeMounts:
+            {{- if .Values.fluentbit.enabled }}
+            - name: fbit-shared-data
+              mountPath: /mnt/shared
+            {{- end }}
+            - mountPath: "/etc/imperva-auth"
+              name: imperva-auth-secrets
+              {{- with .Values.storeData.onAwsS3}}
+            - mountPath: "/etc/aws-auth"
+              name: aws-auth-secrets
+              readOnly: true
+              {{- end }}
+            - mountPath: {{ .Values.persistence.mountPath }}
+              name: imperva-user-data
+            - name: varlog
+              mountPath: /var/log
+            - mountPath: "/etc/certs/security-engine"
+              name: security-engine-certs-{{.Release.Namespace}}
+              readOnly: true
+            - mountPath: "/etc/certs/data-sender"
+              name: data-sender-certs-{{.Release.Namespace}}
+              readOnly: true
+          {{- include "volume-mount-customer-cert-creation" . | indent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        {{- if .Values.fluentbit.enabled }}
+        - name: fbit
+          image: "{{ include "image-path" (dict "root" .Values "image" .Values.auxImages.fluentBit) }}"
+          ports:
+            - name: fbit
+              containerPort: 24224
+              protocol: TCP
+          env:
+            - name: IMPERVA_INSTANCE_ID
+              valueFrom:
+                configMapKeyRef:
+                  key: instanceId
+                  name: shared-config
+            - name: IMPERVA_CONTROLLER_PACKAGE_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: controllerPackageKey
+                  name: shared-config
+            - name: IMPERVA_CHART_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  key: chartVersion
+                  name: shared-config
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: INGRESS_TYPE
+              valueFrom:
+                configMapKeyRef:
+                  key: ingressType
+                  name: shared-config
+            - name: IMPERVA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: imperva-auth
+                  key: IMPERVA_API_KEY
+                  optional: true
+            - name: IMPERVA_API_ID
+              valueFrom:
+                secretKeyRef:
+                  name: imperva-auth
+                  key: IMPERVA_API_ID
+                  optional: true
+          {{ include "global-env-vars" . | nindent 12 }}
+          volumeMounts:
+            - name: fbit-shared-data
+              mountPath: /mnt/shared
+            - name: fluent-bit-config-data-sender
+              mountPath: /fluent-bit/etc/
+              readOnly: true
+            - name: varlog
+              mountPath: /var/log
+            - name: data-sender-certs-{{.Release.Namespace}}
+              mountPath: "/etc/certs/data-sender"
+          {{- include "volume-mount-customer-cert-creation" . | indent 12 }}
+        {{- end }}
+
+      {{- if .Values.fluentbit.enabled }}
+      initContainers:
+        - name: init-create-tempfile
+          image: "{{ include "image-path" (dict "root" .Values "image" .Values.auxImages.busyBox) }}"
+          command: [ 'sh', '-c', 'echo "@SET token=placeholder" > /mnt/shared/token.conf' ]
+          volumeMounts:
+            - name: fbit-shared-data
+              mountPath: /mnt/shared
+      {{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,29 @@
+apiVersion: v2
+appVersion: 0.7.1
+dependencies:
+- name: envoy
+  repository: file://charts/envoy
+  version: '*'
+- name: envoy-gateway
+  repository: file://charts/envoy-gateway
+  version: '*'
+- name: gloo
+  repository: file://charts/gloo
+  version: '*'
+- name: gcplb
+  repository: file://charts/gcplb
+  version: '*'
+- name: istio
+  repository: file://charts/istio
+  version: '*'
+- name: kong
+  repository: file://charts/kong
+  version: '*'
+- name: nginx-ingress-controller
+  repository: file://charts/nginx-ingress-controller
+  version: '*'
+description: Imperva WAF Anywhere Connectors charts for a variety of Ingress Controllers
+  and proxies
+name: anywhere-connectors
+type: application
+version: 0.7.1

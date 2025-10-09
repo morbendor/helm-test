@@ -1,0 +1,13 @@
+apiVersion: v2
+appVersion: 1.59.0
+dependencies:
+- name: cloud-mediator
+  repository: file://charts/cloud-mediator
+  version: 0.6.36
+- name: data-sender
+  repository: file://charts/data-sender
+  version: 1.16.28
+description: Imperva AWF Components
+name: awf
+type: application
+version: 1.59.0

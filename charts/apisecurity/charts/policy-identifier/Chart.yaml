@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: 0.0.1-standalone
+description: A Helm chart for Kubernetes
+name: policy-identifier
+type: application
+version: 0.0.1-main.73-standalone-2b43d1

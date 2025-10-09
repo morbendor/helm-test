@@ -1,0 +1,117 @@
+image:
+  registry: 446351906296.dkr.ecr.us-east-1.amazonaws.com/app_sec_api_sec
+  repository: apisec-controller-message-bus
+  pullPolicy: Always
+replicaCount: 1
+minReadySeconds: 10
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 60
+  - type: Resource
+    resource:
+      name: memory
+      targetAverageUtilization: 60
+service:
+  annotations:
+    traefik.ingress.kubernetes.io/max-conn-amount: '50'
+    traefik.ingress.kubernetes.io/max-conn-extractor-func: request.host
+  ports:
+  - protocol: TCP
+    port: 6379
+    targetPort: 6379
+  labels:
+    allow.external.access: 'true'
+    discover.in.coligo: 'false'
+deployment:
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/path: /actuator/prometheus
+    prometheus.io/port: '9091'
+  ports:
+  - containerPort: 8080
+    protocol: TCP
+    name: web
+  - containerPort: 9091
+    protocol: TCP
+    name: tcp
+  - containerPort: 5300
+    protocol: TCP
+    name: debug
+env: {}
+ingress:
+  enabled: false
+  annotations: {}
+  path: /
+  hosts:
+  - host: apisec-controller-message-bus.k8s-stage-nvirginia.incapsula-qa.de
+    port: grpc
+  tls: []
+networkPolicy:
+  enabled: false
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: someApp
+    - namespaceSelector:
+        matchLabels:
+          name: prometheus
+    - namespaceSelector:
+        matchLabels:
+          name: traefik
+healthChecks:
+  enabled: false
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: tcp
+    initialDelaySeconds: 60
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: tcp
+    initialDelaySeconds: 60
+resources:
+  requests:
+    memory: 512Mi
+    cpu: 500m
+  limits:
+    memory: 512Mi
+    cpu: 500m
+securityContext:
+  readOnlyRootFilesystem: true
+volumes:
+- name: tmp
+  emptyDir: {}
+- name: for-java-heap-dump
+  hostPath:
+    path: /dumps/apisec-controller-message-bus/
+    type: DirectoryOrCreate
+- name: remote-jwk-url
+  configMap:
+    name: remote-jwk-url
+volumeMounts:
+- mountPath: /tmp
+  name: tmp
+- mountPath: /dumps
+  name: for-java-heap-dump
+- mountPath: /configs
+  name: remote-jwk-url
+  readOnly: true
+nodeSelector: {}
+tolerations: {}
+affinity: {}
+datadog:
+  apm:
+    enabled: true

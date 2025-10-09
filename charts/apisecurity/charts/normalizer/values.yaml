@@ -1,0 +1,182 @@
+# Default values for normalizer
+# This is a YAML-formatted file.
+
+image:
+  registry: 446351906296.dkr.ecr.us-east-1.amazonaws.com/app_sec_api_sec
+  repository: normalizer
+  pullPolicy: Always
+
+replicaCount: 1 
+
+fullnameOverride: api-security-engine-normalizer
+
+minReadySeconds: 10
+
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 60
+  - type: Resource
+    resource:
+      name: memory
+      targetAverageUtilization: 60
+
+service:
+  servicename: normalizer
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+    prometheus.io/port: "8112"
+    traefik.ingress.kubernetes.io/max-conn-amount: "50"
+    traefik.ingress.kubernetes.io/max-conn-extractor-func: request.host
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  labels:
+    # allow access from api-gateway
+    allow.external.access: "true"
+    # access from coligo
+    discover.in.coligo: "false"
+    # change the external subdomain
+    # external.subdomain: normalizer
+
+deployment:
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/actuator/prometheus"  
+    prometheus.io/port: "9091"
+  ports:
+  - containerPort: 8080
+    protocol: TCP
+    name: "web"
+  - containerPort: 9091
+    protocol: TCP
+    name: "tcp"
+  - containerPort: 8112
+    protocol: TCP
+    name: "prom"
+  - containerPort: 5300
+    protocol: TCP
+    name: "debug"
+
+env: {}
+
+ingress:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  path: /
+  hosts:
+    - host: normalizer.k8s-stage-nvirginia.incapsula-qa.de
+      port: grpc
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+networkPolicy:
+  enabled: false
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: someApp
+    - namespaceSelector:
+        matchLabels:
+          name: prometheus
+    - namespaceSelector:
+        matchLabels:
+          name: traefik
+
+healthChecks:
+  enabled: false
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: tcp
+    initialDelaySeconds: 60
+    # periodSeconds: 30
+    # timeoutSeconds: 30
+    # failureThreshold: 6
+    # successThreshold: 1
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: tcp
+    initialDelaySeconds: 60
+    # periodSeconds: 30
+    # timeoutSeconds: 30
+    # failureThreshold: 6
+    # successThreshold: 1
+
+resources:
+  requests:
+    memory: "1024Mi"
+    cpu: "512m"
+  limits:
+    memory: "2048Mi"
+    cpu: "2000m"
+
+securityContext:
+  readOnlyRootFilesystem: true
+
+volumes:
+- name: tmp
+  emptyDir: {}
+- name: for-java-heap-dump
+  hostPath:
+    path: /dumps/normalizer/
+    type: DirectoryOrCreate
+- name: vault-lib-config
+  secret:
+    secretName: normalizer-vault-lib-config
+- name: vault-service-ca
+  secret:
+    secretName: vault-service-ca
+
+volumeMounts:
+- mountPath: /tmp
+  name: tmp
+- mountPath: /dumps
+  name: for-java-heap-dump
+- mountPath: /vault-config
+  name: vault-lib-config
+- mountPath: /etc/ssl/vault_service
+  name: vault-service-ca
+
+nodeSelector: {}
+#  kops.k8s.io/instancegroup: pci-compliant
+
+tolerations: {}
+#- key: "pci-compliant"
+#  operator: "Equal"
+#  value: "true"
+#  effect: "NoSchedule"
+
+affinity: {}
+
+datadog:
+  ## @param apm - object - required
+  ## Enabled apm agent and provide custom configs
+  #
+  apm:
+    ## @param enabled - boolean - optional - default: false
+    ## Enable this to enable APM and tracing, on port 8126
+    #
+    enabled: true
+
+vaultStaticSecrets:
+  enabled: false

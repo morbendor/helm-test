@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "bola-detection-engine.fullname" . }}
+  labels:
+    app: {{ template "bola-detection-engine.name" . }}
+    chart: {{ template "bola-detection-engine.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+{{ toYaml .Values.service.labels | indent 4 }}
+  annotations:
+{{ toYaml .Values.service.annotations | indent 4 }}
+
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+{{ toYaml .Values.service.ports | indent 2 }}
+  selector:
+    app: {{ template "bola-detection-engine.name" . }}
+    release: {{ .Release.Name }}

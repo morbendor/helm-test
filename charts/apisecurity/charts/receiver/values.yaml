@@ -1,0 +1,163 @@
+image:
+  registry: 446351906296.dkr.ecr.us-east-1.amazonaws.com/app_sec_api_sec
+  repository: receiver
+  pullPolicy: Always
+replicaCount: 1
+fullnameOverride: api-security-engine-receiver
+minReadySeconds: 10
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 60
+  - type: Resource
+    resource:
+      name: memory
+      targetAverageUtilization: 60
+service:
+  servicename: receiver
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/path: /metrics
+    prometheus.io/port: '8112'
+    traefik.ingress.kubernetes.io/max-conn-amount: '50'
+    traefik.ingress.kubernetes.io/max-conn-extractor-func: request.host
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 5000
+    name: http-port
+  - protocol: TCP
+    port: 443
+    targetPort: 5443
+    name: tls-port
+  labels:
+    allow.external.access: 'true'
+    discover.in.coligo: 'false'
+deployment:
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/path: /actuator/prometheus
+    prometheus.io/port: '9091'
+  ports:
+  - containerPort: 5000
+    protocol: TCP
+    name: web
+  - containerPort: 9091
+    protocol: TCP
+    name: tcp
+  - containerPort: 8112
+    protocol: TCP
+    name: prom
+  - containerPort: 5300
+    protocol: TCP
+    name: debug
+env: {}
+ingress:
+  enabled: false
+  ingressClassName: nginx
+  annotations: {}
+  paths: []
+  hosts:
+  - host: receiver.k8s-stage-nvirginia.incapsula-qa.de
+    port: grpc
+  tls: []
+networkPolicy:
+  enabled: false
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: someApp
+    - namespaceSelector:
+        matchLabels:
+          name: prometheus
+    - namespaceSelector:
+        matchLabels:
+          name: traefik
+healthChecks:
+  enabled: false
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: tcp
+    initialDelaySeconds: 60
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: tcp
+    initialDelaySeconds: 60
+securityContext:
+  readOnlyRootFilesystem: true
+volumes:
+- name: tmp
+  emptyDir: {}
+- name: for-java-heap-dump
+  hostPath:
+    path: /dumps/receiver/
+    type: DirectoryOrCreate
+- name: vault-service-ca
+  secret:
+    secretName: vault-service-ca
+- name: vault-lib-config
+  secret:
+    secretName: receiver-vault-lib-config
+volumeMounts:
+- mountPath: /tmp
+  name: tmp
+- mountPath: /dumps
+  name: for-java-heap-dump
+- mountPath: /etc/ssl/vault_service
+  name: vault-service-ca
+- mountPath: /vault-config
+  name: vault-lib-config
+nodeSelector: {}
+tolerations: {}
+affinity: {}
+datadog:
+  apm:
+    enabled: true
+certManager:
+  enabled: true
+  vault:
+    server: https://vault:8200
+    path: pki_intermediate/sign/pki_role
+    namespace: namespace
+    appRole:
+      path: approle
+      roleId: dc58c86f-2515-eee2-140c-12bfc4e8f310
+  certificate:
+    secretName: user-receiver-ingress-certificate-secret
+    duration: 240h
+    renewBefore: 12h
+    subject:
+      organizations:
+      - Imperva Inc.
+    commonName: user-receiver-ingress
+    dnsNames:
+    - user-receiver-ingress
+    privateKey:
+      encoding: PKCS8
+      rotationPolicy: Always
+      algorithm: RSA
+      size: '2048'
+    issuerRef:
+      name: user-receiver-ingress-vault-issuer
+      kind: Issuer
+vaultPKISecret:
+  enabled: false
+nodePort:
+  enabled: false
+tlsCerts:
+  enabled: false
+serviceAffinity:
+  sessionAffinity: None

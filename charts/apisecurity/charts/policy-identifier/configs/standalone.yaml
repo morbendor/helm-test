@@ -1,0 +1,58 @@
+standalone: "true"
+
+image:
+  registry: imperva.jfrog.io/apisec-airgap-stage
+  repository: policy-identifier
+  tag: 0.0.1-main.73-2b43d1
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: apisecurity-credentials
+
+env:
+  DEPLOYMENT_PROFILE: "ON-PREM"
+  POLICY_IDENTIFIER_ENABLED: true
+  REDIS_STORE_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  NORMALIZER_REDIS_STREAM_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  POLICY_REDIS_STREAM_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  REDIS_HEALTH_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  CLIENT_AUTH_ENABLED: false
+  POLICY_DOWNLOADER_API_SERVER: "api-security-engine-policy-downloader"
+  METRICS_SERVER_PORT: 8112
+  RLOG_LOG_LEVEL: "INFO"
+
+initContainerEnv:
+  REDIS_PROPS: '[{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled":false}]'
+
+securityContext:
+  readOnlyRootFilesystem: false
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+
+volumeMounts:
+  - mountPath: /tmp
+    name: tmp
+
+replicaCount: 1
+equinix: false
+
+deployment:
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "metrics"
+    prometheus.io/port: "8112"
+  ports:
+    - containerPort: 8080
+      protocol: TCP
+      name: "web"
+    - containerPort: 9091
+      protocol: TCP
+      name: "tcp"
+    - containerPort: 5300
+      protocol: TCP
+      name: "debug"
+    - containerPort: 8112
+      protocol: TCP
+      name: "prometheus"

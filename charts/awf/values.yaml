@@ -1,0 +1,20 @@
+global:
+  env: prod
+  debug: false
+  ingressControllerNamespace: "" # Namespace where the Envoy proxy is installed. If left blank, the namespace will be taken from the to be the WAF Anywhere release namespace
+  registry: imperva.jfrog.io # Registry for the images, will be used throughout the charts
+  certificates:
+    allowAnyCertificate: false # Allow any certificate to be used for the communication with the WAF Anywhere Cloud services
+    certFilePath: "" # Path to the certificate file that will be used for the communication with the WAF Anywhere Cloud services. Leave empty to use the default certificates.
+    secretCertName: "" # The name of the secret containing the certificate file, supplied by the customer. Must exist in the installation namespace before installation. Leave blank to use the default certificates.
+  proxy: # Configuration for setting http_proxy, https_proxy, and no_proxy environment variables
+    https: "" # Set the proxy that will be used to access URLs that use the HTTP protocol. Leave empty if not needed.
+    noProxy: "" # Set a comma-separated list of addresses to exclude from the proxy. Leave empty if not needed.
+  caCertificate: ""
+  caKey: ""
+
+anywhere-commons:
+  enabled: false
+
+
+dasdasdas: dasdasdas

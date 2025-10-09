@@ -1,0 +1,17 @@
+{{- if .Values.autoscaling.enabled }}
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ template "appl-filter.fullname" . }}
+  labels:
+    app: {{ template "appl-filter.name" . }}
+    chart: {{ template "appl-filter.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ template "appl-filter.fullname" . }}
+{{ (unset .Values.autoscaling "enabled") | toYaml | indent 2 }}
+{{- end }}

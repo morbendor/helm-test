@@ -1,0 +1,17 @@
+securityEngineServiceName: imperva-security-engine-svc
+securityEngineServicePort: 443
+
+# This is an HTTPRoute resource that can be set during the installation.
+# It can be configured multiple times, corresponding to the number of HTTPRoutes
+# that already exist in the environment.
+#
+# example: --set httproutes[0].name=route1 --set httproutes[0].namespace=ns1 \
+# --set httproutes[1].name=route2 --set httproutes[1].namespace=ns2 \
+# evantually, the value will look like this:
+#
+# httproutes:
+#   - name: example-route
+#     namespace: example-namespace
+#   - name: example-route2
+#     namespace: example-namespace2
+httproutes: []

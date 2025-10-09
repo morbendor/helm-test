@@ -1,0 +1,33 @@
+enabled: true
+global:
+  env: prod
+  debug: false
+  ingressControllerNamespace: ingress-nginx # Namespace where the NGINX ingress controller is installed
+  ingressControllerDeploymentName: ingress-nginx-controller
+  failOpen: false # value which enables the traffic if LSE pod is unavailable (default is false, no traffic allowed)
+  registry: imperva.jfrog.io # Registry for the images, will be used throughout the charts
+  certificates:
+    allowAnyCertificate: false # Allow any certificate to be used for the communication with the WAF Anywhere Cloud services
+    certFilePath: "" # Path to the certificate file that will be used for the communication with the WAF Anywhere Cloud services. Leave empty to use the default certificates.
+    secretCertName: "" # The name of the secret containing the certificate file, supplied by the customer. Must exist in the installation namespace before installation. Leave blank to use the default certificates.
+  proxy:
+    # Configuration for setting http_proxy, https_proxy, and no_proxy environment variables
+    https: "" # Set the proxy that will be used to access URLs that use the HTTP protocol. Leave empty if not needed.
+    noProxy: "" # Set a comma-separated list of addresses to exclude from the proxy. Leave empty if not needed.
+  # Feature in alpha phase - automating the installation process
+  # Enabling any of the options gives the Imperva Anywhere instance permissions for patching the ingress controller deployment
+  autoInstall:
+    restartIngressControllerDeployment: false # Restarting the IC deployment, useful for making sure projected volumes on the pod are up-to-date
+    autoPatchIngressControllerResources: false # Automatically patch the IC required resources (Deployment and ConfigMap)
+
+auxImages:
+  nginxPlugin:
+    repository: imperva-waf-anywhere-plugins/nginx-plugin
+    pullPolicy: Always
+    tag: 0.4.0.19
+    tagSuffix: ""
+    digest: "" # image digest to use, takes precedence over tag if specified
+
+base:
+  flavor: "controller" # currently "controller" is the only supported flavor
+  tag: "v1.12.2"

@@ -1,0 +1,40 @@
+{{- if (empty .Values.global.tls.existingSecret) -}}
+
+{{- $securityEngineCertificates := (include "security-engine.gen-certs" .) }}
+
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/tls
+metadata:
+  name: {{ include "anywhere-commons.get-security-engine-tls-secret-name" .}}
+  labels:
+    app: {{ template "security-engine.name" . }}
+    chart: {{ template "security-engine.name" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+data:
+{{ $securityEngineCertificates | indent 2 }}
+---
+{{- if has .Values.global.ingressType (list "nginx" "kong" "istio") }}
+# The Ingress Controller requires the LSE cert to establish communication
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/tls
+metadata:
+  namespace: {{ include "ingressController.namespace" . }}
+  name: {{ include "anywhere-commons.get-security-engine-tls-secret-name-ic" .}}
+  labels:
+    app: {{ template "security-engine.name" . }}
+    chart: {{ template "security-engine.name" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+data:
+{{ $securityEngineCertificates | indent 2 }}
+{{- end }}
+{{- end }}

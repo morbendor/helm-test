@@ -1,0 +1,57 @@
+{{- if .Values.certManager.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ template "bola-detection-engine.name" . }}-certificate
+spec:
+  secretName: {{ template "bola-detection-engine.name" . }}-certificate-secret
+  duration: {{ .Values.certManager.certificate.duration }}
+  renewBefore:  {{ .Values.certManager.certificate.renewBefore }}
+  subject: {{ toYaml .Values.certManager.certificate.subject | nindent 4 }}
+  commonName: {{ .Values.certManager.certificate.commonName }}
+  keystores:
+    pkcs12:
+      create: true
+      passwordSecretRef:
+        name: {{ template "bola-detection-engine.name" . }}-certificate-password-secret
+        key: password
+  dnsNames:
+  - {{ .Values.certManager.certificate.commonName }}
+  privateKey:
+    rotationPolicy: {{ .Values.certManager.certificate.privateKey.rotationPolicy }}
+    encoding: {{ .Values.certManager.certificate.privateKey.encoding }}
+    algorithm: {{ .Values.certManager.certificate.privateKey.algorithm }}
+    size: {{ .Values.certManager.certificate.privateKey.size }}
+  issuerRef:
+    name: {{ template "bola-detection-engine.name" . }}-vault-issuer
+    kind: Issuer
+{{- end }}
+---
+{{- if .Values.certManagerPCI.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ template "bola-detection-engine.name" . }}-pci-certificate
+spec:
+  secretName: {{ template "bola-detection-engine.name" . }}-pci-certificate-secret
+  duration: {{ .Values.certManagerPCI.certificate.duration }}
+  renewBefore:  {{ .Values.certManagerPCI.certificate.renewBefore }}
+  subject: {{ toYaml .Values.certManagerPCI.certificate.subject | nindent 4 }}
+  commonName: {{ .Values.certManagerPCI.certificate.commonName }}
+  keystores:
+    pkcs12:
+      create: true
+      passwordSecretRef:
+        name: {{ template "bola-detection-engine.name" . }}-pci-certificate-password-secret
+        key: password
+  dnsNames:
+  - {{ .Values.certManagerPCI.certificate.commonName }}
+  privateKey:
+    rotationPolicy: {{ .Values.certManagerPCI.certificate.privateKey.rotationPolicy }}
+    encoding: {{ .Values.certManagerPCI.certificate.privateKey.encoding }}
+    algorithm: {{ .Values.certManagerPCI.certificate.privateKey.algorithm }}
+    size: {{ .Values.certManagerPCI.certificate.privateKey.size }}
+  issuerRef:
+    name: {{ template "bola-detection-engine.name" . }}-pci-vault-issuer
+    kind: Issuer
+{{- end }}

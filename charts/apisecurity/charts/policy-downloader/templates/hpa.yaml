@@ -1,0 +1,18 @@
+{{- if .Values.autoscaling.enabled }}
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ template "policy-downloader.fullname" . }}
+  labels:
+    app: {{ template "policy-downloader.name" . }}
+    chart: {{ template "policy-downloader.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ template "policy-downloader.fullname" . }}
+{{ (unset .Values.autoscaling "enabled") | toYaml | indent 2 }}
+{{- end }}
+

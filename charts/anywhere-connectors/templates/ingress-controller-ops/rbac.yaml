@@ -1,0 +1,101 @@
+{{- if (include "ingress-controller-ops.createAutoPatchResources" .) }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ingress-controller-ops-role
+  namespace: {{ include "ingressController.namespace" . }}
+  annotations:
+    "helm.sh/hook": post-install, pre-delete, post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation, hook-failed, hook-succeeded
+rules:
+  - apiGroups:
+      - "apps"
+    resources:
+      - deployments
+      - deployments/status
+    resourceNames:
+      - {{ include "ingressController.deploymentName" . }}
+    verbs:
+      - patch
+      - get
+{{- if eq "nginx" .Values.global.ingressType  }}
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    resourceNames:
+      - {{ include "ingressController.deploymentName" . }}
+    verbs:
+      - patch
+      - get
+{{- end }}
+{{- if eq "gloo" .Values.global.ingressType  }}
+  - apiGroups:
+      - "gloo.solo.io"
+    resources:
+      - settings
+    resourceNames:
+      - default
+    verbs:
+      - patch
+{{- end }}
+{{- if eq "kong" .Values.global.ingressType }}
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ingress-controller-ops-cluster-role
+  annotations:
+    "helm.sh/hook": post-install, pre-delete, post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation, hook-failed, hook-succeeded
+rules:
+  - apiGroups:
+    - configuration.konghq.com
+    resources:
+    - kongclusterplugins
+    resourceNames:
+    - {{ .Values.kong.pluginName }}
+    verbs:
+    - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ingress-controller-ops-cluster-role-binding
+  annotations:
+    "helm.sh/hook": post-install, pre-delete, post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation, hook-failed, hook-succeeded
+subjects:
+  - kind: ServiceAccount
+    name: ingress-controller-ops-hook
+    namespace: {{ include "ingressController.namespace" . }}
+roleRef:
+  kind: ClusterRole
+  name: ingress-controller-ops-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ingress-controller-ops-role-binding
+  namespace: {{ include "ingressController.namespace" . }}
+  annotations:
+    "helm.sh/hook": post-install, pre-delete, post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation, hook-failed, hook-succeeded
+subjects:
+  - kind: ServiceAccount
+    name: ingress-controller-ops-hook
+    namespace: {{ include "ingressController.namespace" . }}
+roleRef:
+  kind: Role
+  name: ingress-controller-ops-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

@@ -1,0 +1,39 @@
+dependencies:
+- name: normalizer
+  repository: https://rt.imperva-services.net/artifactory/pd-helm-charts-stage/
+  version: 0.0.1-master.602-standalone-05cf97
+- name: receiver
+  repository: https://rt.imperva-services.net/artifactory/pd-helm-charts-stage/
+  version: 0.0.1-master.486-standalone-3449c3
+- name: discovery-feature-extractor
+  repository: https://rt.imperva-services.net/artifactory/pd-helm-charts-stage/
+  version: 0.0.1-master.258-standalone-b12823
+- name: appl-clf-engine
+  repository: https://rt.imperva-services.net/artifactory/pd-helm-charts-stage/
+  version: 0.0.1-master.424-standalone-b9b5a5
+- name: appl-filter
+  repository: https://rt.imperva-services.net/artifactory/pd-helm-charts-stage/
+  version: 0.0.1-master.224-standalone-f8ea89
+- name: summarization-engine
+  repository: https://rt.imperva-services.net/artifactory/pd-helm-charts-stage/
+  version: 0.0.1-master.338-standalone-7c2730
+- name: cloud-connecter
+  repository: https://rt.imperva-services.net/artifactory/pd-helm-charts-stage/
+  version: 0.0.1-master.51-standalone-4e238d
+- name: bola-feature-extractor
+  repository: https://rt.imperva-services.net/artifactory/pd-helm-charts-stage/
+  version: 0.0.1-master.153-standalone-a19ef3
+- name: apisec-controller-message-bus
+  repository: https://rt.imperva-services.net/artifactory/pd-helm-charts-stage/
+  version: 0.0.1-main.19-standalone-7f5100
+- name: policy-downloader
+  repository: https://rt.imperva-services.net/artifactory/pd-helm-charts-stage/
+  version: 0.0.1-main.77-standalone-fcd801
+- name: policy-identifier
+  repository: https://rt.imperva-services.net/artifactory/pd-helm-charts-stage/
+  version: 0.0.1-main.73-standalone-2b43d1
+- name: bola-detection-engine
+  repository: https://rt.imperva-services.net/artifactory/pd-helm-charts-stage/
+  version: 0.0.1-main.109-standalone-0b512c
+digest: sha256:9cdbc8aba37c3c6a244366b7ed3433125d01933b16daed219ee6f27fcaa54dd3
+generated: "2025-07-05T21:26:36.479097655+03:00"

@@ -1,0 +1,67 @@
+standalone: "true"
+
+streams:
+  - general
+
+image:
+  registry: imperva.jfrog.io/apisec-airgap-stage
+  repository: receiver
+  tag: 0.0.1-master.486-3449c3
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: apisecurity-credentials
+
+env:
+  RLOG_LOG_LEVEL: "INFO"
+  DEPLOYMENT_PROFILE: "ON-PREM"
+  METRICS_SLEEP_TIME: "2"
+  RCVR_REDIS_PUBLISHER_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled":false}'
+  REDIS_HEALTH_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled":false}'
+
+initContainerEnv:
+  REDIS_PROPS: '[{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled":false}]'
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: cert-volume-rcvr
+    emptyDir: {}
+
+volumeMounts:
+  - mountPath: /tmp
+    name: tmp
+  - mountPath: /etc/certs/
+    name: cert-volume-rcvr
+
+certManager:
+  enabled: false
+
+nodePort:
+  enabled: true
+  service:
+    port: 80
+    httpNodePort: 32111
+    sslport: 443
+    httpsNodePort: 32443
+  labels:
+    app.kubernetes.io/instance: receiver
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: receiver
+  selectorLabels:
+    app.kubernetes.io/instance: receiver
+    app.kubernetes.io/name: receiver
+
+tlsCerts:
+  enabled: true
+  serviceName: api-security-engine-receiver
+  duration: 3650
+  altNames:
+    - api-security-engine-receiver
+  ca:
+    name: imperva-ca
+    validity: 3650
+  secretName: receiver-tls-secret
+
+serviceAffinity:
+  sessionAffinity: ClientIP # or None

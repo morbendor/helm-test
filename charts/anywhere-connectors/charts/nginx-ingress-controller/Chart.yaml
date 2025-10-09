@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: 0.4.0.19
+description: Imperva's WAF Anywhere solution for Ingress NGINX Controller
+name: nginx-ingress-controller
+type: application
+version: 1.3.0

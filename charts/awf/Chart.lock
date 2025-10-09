@@ -1,0 +1,9 @@
+dependencies:
+- name: cloud-mediator
+  repository: https://imperva.jfrog.io/artifactory/awf-helmcharts-stage
+  version: 0.6.36
+- name: data-sender
+  repository: https://imperva.jfrog.io/artifactory/awf-helmcharts-stage
+  version: 1.16.28
+digest: sha256:381d27136dab187041fb712a73249fea3a51f41bb4ef62ab6d0f614dca6d5f17
+generated: "2025-09-16T16:56:52.75412621+03:00"

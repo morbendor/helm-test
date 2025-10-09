@@ -1,0 +1,35 @@
+standalone: "true"
+
+image:
+  registry: imperva.jfrog.io/apisec-airgap-stage
+  repository: appl-clf-engine
+  tag: 0.0.1-master.424-b9b5a5
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: apisecurity-credentials
+
+env:
+  DEPLOYMENT_PROFILE: "ON-PREM"
+  RCVR_REDIS_PUBLISHER_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  REDIS_HEALTH_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  CONFIG_PUBLISHER_HOST: "http://api-security-engine-cloud-connecter"
+
+initContainerEnv:
+  REDIS_PROPS: '[{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled":false}]'
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+
+volumeMounts:
+  - mountPath: /tmp
+    name: tmp
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "500m"
+  limits:
+    memory: "1024Mi"
+    cpu: "1000m"

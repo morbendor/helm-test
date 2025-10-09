@@ -1,0 +1,25 @@
+{{- if eq "gcplb" .Values.global.ingressType }}
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    beta.cloud.google.com/backend-config: '{"default": "{{ include "gcplb.fullname" . }}-backend-config"}'
+  name: {{ include "gcplb.fullname" . }}-proxy
+  labels: 
+    {{- include "gcplb.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  clusterIP: None
+  ports:
+    - appProtocol: HTTP2
+      port: {{ .Values.service.port }}
+      targetPort: https
+      protocol: TCP
+      name: https
+    - name: admin
+      port: 9901
+      protocol: TCP
+      targetPort: admin
+  selector:
+    {{- include "gcplb.selectorLabels" . | nindent 4 }}
+{{- end }}

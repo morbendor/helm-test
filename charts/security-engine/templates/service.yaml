@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "security-engine.fullname" . }}-svc
+  labels:
+    app: imperva-security-engine
+    {{- include "security-engine.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  clusterIP: None
+  ports:
+    - port: {{ if has .Values.global.ingressType (list "envoy-gateway" "gloo") }}443{{ else }}{{ .Values.service.port }}{{ end }}
+      targetPort: https
+      protocol: TCP
+      name: https
+      {{- if .Values.service.appProtocol }}
+      appProtocol: {{ .Values.service.appProtocol }}
+      {{- end }}
+    - port: 8081
+      targetPort: 8081
+      protocol: TCP
+      name: health
+  selector:
+    {{- include "security-engine.selectorLabels" . | nindent 4 }}

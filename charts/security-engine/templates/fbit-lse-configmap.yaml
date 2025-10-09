@@ -1,0 +1,140 @@
+{{- if .Values.fluentbit.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config-security-engine
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush                  30
+        Log_Level              info
+        Parsers_File           parsers.conf
+        storage.path           /var/log/flb-storage/
+        storage.checksum       on
+        storage.backlog.mem_limit 15M
+
+    {{- if .Values.fluentbit.collectAndSendLogs }}
+    [INPUT] # Logs from the /var/log/incapd/incapd folder
+        Name                   tail
+        Buffer_Chunk_Size      32K
+        Path                   /var/log/incapsula/incapd/incapd.log,/var/log/incapsula/incapd/audit.log,/var/log/incapsula/incapd/incapd_events.log,/var/log/incapsula/incapd/watchdog.log,/var/log/incapsula/incapd/cfg_status.log
+        Parser                 varlog_incapd
+        Tag                    varlog_incapd
+        Path_Key               file_path
+
+    [INPUT] # Logs from the /var/log/incapd/incapd/request_log folder
+        Name                   tail
+        Buffer_Chunk_Size      32K
+        Path                   /var/log/incapsula/request_log/request.log,/var/log/incapsula/request_log/mini_Req.log,/var/log/incapsula/request_log/site.*.request.log.*
+        Parser                 varlog_incapd
+        Tag                    varlog_incapd_request_log
+        Path_Key               file_path
+
+    [INPUT] # Logs from the /var/log/incapsula folder
+        Name                   tail
+        Buffer_Chunk_Size      32K
+        Path                   /var/log/incapsula/account_conf_sync.log,/var/log/incapsula/account_event_sync.log,/var/log/incapsula/performance_lse.log,/var/log/incapsula/global_mmdb_sync.log,/var/log/incapsula/clean_dir.log
+        Parser                 varlog_account
+        Tag                    varlog_account
+        Path_Key               file_path
+
+    [INPUT] # Logs from the /var/log/incapsula folder
+        Name                   tail
+        Buffer_Chunk_Size      32K
+        Path                   /var/log/incapsula/incapd/cfg_error.log
+        Parser                 config_error
+        Tag                    config_error
+        Path_Key               file_path
+
+    [FILTER] # Remove empty logs
+        Name                   Grep
+        Match                  *
+        Exclude                log ^$
+
+
+    [FILTER] # Unstructured logs filter - logs that couldnt be parsed have the 'log' key, we structure them with default values
+        Name                   modify
+        Match                  *
+
+        Condition              Key_Exists log
+        Add                    caller unspecified
+        Add                    level I
+        Rename                 log message
+
+    [FILTER]
+        Name                   lua
+        Match                  *
+        Script                 filters.lua
+        Call                   lse_levels_and_metadata
+
+    [OUTPUT]
+        Name                   stdout
+        Match                  *
+        Format                 json
+        storage.total_limit_size   0
+
+    [OUTPUT] # Logs are sent from the LSE fluentbit client to the cloud mediator fluentbit client
+        Name                   forward
+        Match                  *
+        Host                   imperva-data-sender
+        Port                   24224
+        tls                    off
+        tls.verify             off
+        tls.ca_file            /etc/certs/security-engine/ca.crt
+        tls.crt_file           /etc/certs/security-engine/tls.crt
+        tls.key_file           /etc/certs/security-engine/tls.key
+        tls.debug              4
+        Self_Hostname          imperva-security-engine-svc
+        storage.total_limit_size   {{ .Values.fluentbit.total_log_storage }}
+    {{- end }}
+
+  # This lua script is in charge of converting the log record to the required structure (The record is in JSON format)
+  filters.lua: |
+    function lse_levels_and_metadata(tag, timestamp, record)
+        -- Ensuring every log has the hostname, appname and no microseconds key
+        record['hostname'] =  os.getenv("HOSTNAME")
+        record['appname'] =  "security-engine"
+        -- Add timestamp to log in case of missing timestamp
+        if record['timestamp'] == nil then
+          record['timestamp'] = timestamp * 1000 -- convert to milliseconds
+        end
+        -- Mapping log levels
+        local currLevel = record['level']
+        if currLevel == 'I' then
+          record['level'] = 'info'
+        elseif currLevel == 'W' or currLevel == 'Warning' then
+          record['level'] = 'warn'
+        elseif currLevel == 'E' or currLevel == 'Error' then
+          record['level'] = 'error'
+        elseif currLevel == 'D' then
+          record['level'] = 'debug'
+        elseif currLevel == 'F' then
+          record['level'] = 'critical'
+        end
+        return 1, timestamp, record
+    end
+
+
+  parsers.conf: |
+
+    [PARSER] # Example log: [09/05 12:03:10006][main    ][default    ][exo_log.c       ][215 ](W): ---- Message repeated 149 times ---- error: base/prom_db_metrics.c(95):prom_db_open_tmp_file Failed to create metrics file %s - %s
+        Name    varlog_incapd
+        Format  regex
+        Regex   \[(?<timestamp>\d{2}\/\d{2} \d{2}:\d{2}:\d{2}\d{3})\](?<caller>\[[^\]]+\]\[[^\]]+\]\[[^\]]+\]\[[^\]]+\])\((?<level>[A-Z])\): (?<message>.+)
+        Time_Key timestamp
+        Time_Format %d/%m %H:%M:%S%L
+
+    [PARSER] # Example log: [2023-05-17 13:38:51,663][/incap/global_config/global/scripts/account_event_sync.py](I): Sending file: [incap_stats_1_2000_00000001_00000001_2023-05-17_1337.incapd] to mediator
+        Name    varlog_account
+        Format  regex
+        Regex   \[(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})\]\[(?<caller>[^\]]+)\]\((?<level>[A-Z])\): (?<message>.+)
+        Time_Key timestamp
+        Time_Format %Y-%m-%d %H:%M:%S,%L
+
+    [PARSER] # Example log: Error   : /global/high_priority_rules.csv (Thu Sep 12 12:23:13 2024) HIGH_PRIORITY_RULES: Failed to open /incap/global_config/global/high_priority_rules.csv: No such file or directory (worker_0: Thu Sep 12 12:23:13 2024)
+        Name        config_error
+        Format      regex
+        Regex       (?<level>\w+)\s+:\s+(?<caller>[^\(]+)\((?<timestamp>\w+ \w+ \d{2} \d{2}:\d{2}:\d{2} \d{4})\)\s*(?<message>.+)
+        Time_Key    timestamp
+        Time_Format %a %b %d %H:%M:%S %Y
+{{- end }}

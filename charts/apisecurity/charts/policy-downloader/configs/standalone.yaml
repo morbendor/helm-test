@@ -1,0 +1,68 @@
+standalone: "true"
+
+image:
+  registry: imperva.jfrog.io/apisec-airgap-stage
+  repository: policy-downloader
+  tag: 0.0.1-main.77-fcd801
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: apisecurity-credentials
+
+env:
+  RLOG_LOG_LEVEL: "INFO"
+  DEPLOYMENT_PROFILE: "ON-PREM"
+  METRICS_SERVER_PORT: 8112
+  PROFILE: stage
+  POLICY_DOWNLOADER_ENABLED: true
+  # Redis
+  REDIS_STORE_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  REDIS_STREAM_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  REDIS_HEALTH_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  #Server auth
+  SERVER_AUTH_ENABLED: false
+  #Client auth
+  POLICY_DOWNLOADER_CLOUD_CONFIG_PUBLISHER_CLIENT_AUTH_ENABLED: false
+  #Poll
+  POLICY_DOWNLOADER_POLL_INTERVAL_IN_SECONDS: 60
+  #Config publisher
+  CLOUD_CONFIG_PUBLISHER_CLIENT_GET_URL: http://api-security-engine-cloud-connecter/v2/m2m/config/items/metadata
+  CLOUD_CONFIG_PUBLISHER_VERIFY_CERTIFICATE: false
+  POLICY_DOWNLOADER_CLOUD_CONFIG_PUBLISHER_QUERY_PARAMS: '{"configurationTypeList":"API_SEC_POLICY","page[number]":"0"}'
+  CLOUD_CONFIG_PUBLISHER_ENABLE_METRICS: true
+
+initContainerEnv:
+  REDIS_PROPS: '[{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled":false}]'
+
+securityContext:
+  readOnlyRootFilesystem: false
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+
+volumeMounts:
+  - mountPath: /tmp
+    name: tmp
+
+replicaCount: 1
+equinix: false
+
+deployment:
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "metrics"
+    prometheus.io/port: "8112"
+  ports:
+    - containerPort: 8080
+      protocol: TCP
+      name: "web"
+    - containerPort: 9091
+      protocol: TCP
+      name: "tcp"
+    - containerPort: 5300
+      protocol: TCP
+      name: "debug"
+    - containerPort: 8112
+      protocol: TCP
+      name: "prometheus"

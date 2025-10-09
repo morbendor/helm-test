@@ -1,0 +1,42 @@
+standalone: "true"
+
+image:
+  registry: imperva.jfrog.io/apisec-airgap-stage
+  repository: appl-filter
+  tag: 0.0.1-master.224-f8ea89
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: apisecurity-credentials
+
+env:
+  DEPLOYMENT_PROFILE: "ON-PREM"
+  CLASSIFICATION_SVC_HOST: '{"host":"http://api-security-engine-appl-clf-engine", "port":"9000"}'
+  REDIS_CACHE_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  REDIS_RCVR_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  REDIS_PUBLISHER_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  REDIS_CONFIG_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  REDIS_HEALTH_CONNECTION: '{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled": false}'
+  CONFIG_PUBLISHER_HOST: 'http://api-security-engine-cloud-connecter'
+  CONFIG_PUBLISHER: 'true'
+  CONFIG_POLL_FREQUENCY_MINS: 5
+  SERVICE_AUTH_ENABLED: 'false'
+
+initContainerEnv:
+  REDIS_PROPS: '[{"host":"apisec-controller-message-bus", "port":6379, "cred_source": "env", "is_tls_enabled":false}]'
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+
+volumeMounts:
+  - mountPath: /tmp
+    name: tmp
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "500m"
+  limits:
+    memory: "1024Mi"
+    cpu: "1000m"

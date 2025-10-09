@@ -1,0 +1,24 @@
+{{- if eq "envoy-gateway" .Values.global.ingressType -}}
+{{- include "envoy-gateway.validations" . }}
+{{- if eq "true" (include "envoy-gateway.atLeastOneDifferentNamespaceFromReleaseNamespace" . | trim) }}
+{{- $httpRoutesByNamespace := include "envoy-gateway.httpRoutesByNamespace" . | fromYaml }}
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: reference-grant-to-{{ .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  from:
+  {{- range $namespace, $routes := $httpRoutesByNamespace }}
+  {{- if ne $namespace $.Release.Namespace }}
+  - group: gateway.envoyproxy.io
+    kind: EnvoyExtensionPolicy
+    namespace: {{ $namespace }}
+  {{- end }}
+  {{- end }}
+  to:
+  - group: ""
+    kind: Service
+---
+{{- end }}
+{{- end }}
