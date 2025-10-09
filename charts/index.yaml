@@ -3,7 +3,7 @@ entries:
   imperva-stack:
   - apiVersion: v2
     appVersion: 2.1.0
-    created: "2025-10-09T17:22:33.599559+03:00"
+    created: "2025-10-09T17:23:30.69211+03:00"
     dependencies:
     - import-values:
       - child: defaults
@@ -32,10 +32,10 @@ entries:
       - waap
       version: '*'
     description: Imperva Anywhere Solution
-    digest: e7c3a08609d3efd646e9c8d2d97c0c4e51a478f62c4beff94c5256d034c50e91
+    digest: 3bd2a29a328a96ee5611c1f6a024ad2961e6ab0acb7bcff3ceebc1b68cd52804
     name: imperva-stack
     type: application
     urls:
     - https://morbendor.github.io/helm-test/charts/imperva-stack-2.1.0.tgz
     version: 2.1.0
-generated: "2025-10-09T17:22:33.585961+03:00"
+generated: "2025-10-09T17:23:30.68124+03:00"
