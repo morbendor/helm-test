@@ -3,7 +3,7 @@ entries:
   imperva-stack:
   - apiVersion: v2
     appVersion: 2.1.0
-    created: "2025-10-09T12:36:59.019642+03:00"
+    created: "2025-10-09T12:43:56.625751+03:00"
     dependencies:
     - import-values:
       - child: defaults
@@ -38,4 +38,4 @@ entries:
     urls:
     - https://morbendor.github.io/helm-test/charts/imperva-stack-2.1.0.tgz
     version: 2.1.0
-generated: "2025-10-09T12:36:59.008979+03:00"
+generated: "2025-10-09T12:43:56.617124+03:00"
